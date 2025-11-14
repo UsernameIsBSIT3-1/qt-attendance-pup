@@ -1,4 +1,4 @@
-# QT Attendance System
+# QR Attendance System
 ## 🏗️ Current Progress (Sprint 1)
 - Initialized folder structure
 - Added backend skeleton modules
