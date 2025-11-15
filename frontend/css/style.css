@@ -1,0 +1,80 @@
+/* frontend/css/style.css */
+
+:root{
+  --sidebar-bg: #2C3E50;
+  --primary: #3498DB;
+  --accent: #27AE60;
+  --card-bg: #ffffff;
+  --muted: #7f8c8d;
+  --page-bg: #f5f7fa;
+}
+
+*{box-sizing:border-box;font-family:Inter, Arial, sans-serif}
+
+body{
+  margin:0;
+  background:var(--page-bg);
+  color:#222;
+}
+
+/* layout */
+.app{
+  display:flex;
+  height:100vh;
+}
+
+/* sidebar */
+.sidebar{
+  width:220px;
+  background:var(--sidebar-bg);
+  color:white;
+  padding:24px 12px;
+}
+.sidebar h2{margin:0 0 16px;font-size:18px;letter-spacing:1px}
+.sidebar button{
+  display:block;
+  width:100%;
+  margin:8px 0;
+  padding:10px;
+  border:none;
+  background:rgba(255,255,255,0.06);
+  color:white;
+  cursor:pointer;
+  border-radius:6px;
+  text-align:left;
+}
+
+/* main */
+.main{
+  flex:1;
+  padding:20px;
+}
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.header h1{margin:0;font-size:20px}
+.controls{margin-top:12px}
+.controls button{
+  margin-right:8px;
+  padding:10px 14px;
+  border-radius:6px;border:none;cursor:pointer;
+}
+.btn-primary{background:var(--primary);color:white;}
+.btn-success{background:var(--accent);color:white;}
+.btn-warn{background:#e67e22;color:white;}
+
+/* card */
+.card{
+  background:var(--card-bg);
+  border-radius:8px;
+  padding:16px;
+  margin-top:18px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.06);
+}
+
+/* table */
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
+th{color:var(--muted);font-weight:600}

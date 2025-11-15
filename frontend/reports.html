@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Reports - PUP Attendance</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <div class="sidebar">
+      <h2>Group 10</h2>
+      <div style="font-size:13px;color:#cfd8dc">QR Attendance</div>
+      <button onclick="location.href='index.html'">Dashboard</button>
+      <button onclick="location.href='scan.html'">Scan</button>
+      <button onclick="location.href='reports.html'">Reports</button>
+    </div>
+
+    <div class="main">
+      <div class="header">
+        <h1>Reports</h1>
+        <div></div>
+      </div>
+
+      <div class="card">
+        <h3>All Attendance Records</h3>
+        <div id="table"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+async function load(){
+  const res = await fetch('/api/attendance');
+  const list = await res.json();
+  const el = document.getElementById('table');
+  if(!list || list.length===0){ el.innerHTML = '<div>No records yet</div>'; return; }
+  let html = '<table><thead><tr><th>ID</th><th>Student</th><th>Time</th></tr></thead><tbody>';
+  list.forEach(r=>{
+    html += `<tr><td>${r.id}</td><td>${r.student_id}</td><td>${new Date(r.timestamp).toLocaleString()}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+load();
+</script>
+</body>
+</html>

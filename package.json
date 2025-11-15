@@ -1,0 +1,30 @@
+{
+  "name": "qt-attendance-pup",
+  "version": "0.1.0",
+  "description": "QR Code Attendance prototype for PUP Parañaque (II1G-17)",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js"
+  },
+  "keywords": [],
+  "author": "Group 10",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "lowdb": "^6.1.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UsernameIsBSIT3-1/qt-attendance-pup.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/UsernameIsBSIT3-1/qt-attendance-pup/issues"
+  },
+  "homepage": "https://github.com/UsernameIsBSIT3-1/qt-attendance-pup#readme"
+}

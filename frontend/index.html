@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>PUP QR Attendance - Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <div class="sidebar">
+      <h2>Group 10</h2>
+      <div style="font-size:13px;color:#cfd8dc">QR Attendance</div>
+      <button onclick="location.href='index.html'">Dashboard</button>
+      <button onclick="location.href='scan.html'">Scan</button>
+      <button onclick="location.href='reports.html'">Reports</button>
+    </div>
+
+    <div class="main">
+      <div class="header">
+        <h1>Dashboard</h1>
+        <div>Logged in: <strong>Group10</strong></div>
+      </div>
+
+      <div class="controls">
+        <button class="btn-primary" onclick="location.href='scan.html'">Go to Scanner</button>
+        <button class="btn-warn" onclick="refresh()">Refresh Records</button>
+      </div>
+
+      <div class="card">
+        <h3>Recent Attendance</h3>
+        <div id="recent">
+          Loading...
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+async function refresh(){
+  const res = await fetch('/api/attendance');
+  const list = await res.json();
+  const el = document.getElementById('recent');
+  if(!list || list.length===0) el.innerHTML = '<div>No records yet</div>';
+  else {
+    let html = '<table><thead><tr><th>ID</th><th>Student</th><th>Time</th></tr></thead><tbody>';
+    list.slice().reverse().slice(0,8).forEach(r=>{
+      html += `<tr><td>${r.id}</td><td>${r.student_id}</td><td>${new Date(r.timestamp).toLocaleString()}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+}
+
+refresh();
+</script>
+</body>
+</html>
