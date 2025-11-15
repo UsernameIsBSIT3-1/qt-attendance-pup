@@ -1,15 +1,17 @@
-# database.py
-# Placeholder for database connection logic
-
 class Database:
     def __init__(self):
         self.connected = False
+        self.records = []
 
     def connect(self):
-        """Simulates connecting to a database."""
         self.connected = True
-        return "Connected to temporary placeholder DB"
+        return "[DB] Connected to placeholder database."
 
-    def close(self):
-        self.connected = False
-        return "Connection closed"
+    def insert(self, data):
+        if not self.connected:
+            return "[DB] ERROR: Not connected."
+        self.records.append(data)
+        return "[DB] Inserted."
+
+    def fetch_all(self):
+        return self.records
