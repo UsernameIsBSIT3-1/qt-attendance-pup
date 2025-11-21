@@ -1,47 +1,86 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Reports - PUP Attendance</title>
-  <link rel="stylesheet" href="css/style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Reports — PUP</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
-  <div class="app">
-    <div class="sidebar">
-      <h2>Group 10</h2>
-      <div style="font-size:13px;color:#cfd8dc">QR Attendance</div>
-      <button onclick="location.href='index.html'">Dashboard</button>
-      <button onclick="location.href='scan.html'">Scan</button>
-      <button onclick="location.href='reports.html'">Reports</button>
-    </div>
 
-    <div class="main">
-      <div class="header">
-        <h1>Reports</h1>
-        <div></div>
-      </div>
+<body class="bg-slate-50 text-slate-800">
+  <div class="min-h-screen flex">
 
-      <div class="card">
-        <h3>All Attendance Records</h3>
-        <div id="table"></div>
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r hidden md:block">
+      <div class="p-6">
+        <div class="font-bold text-xl text-slate-800">Attendance System</div>
+        <div class="text-sm mt-1">Group 10 — PUP</div>
       </div>
-    </div>
+      <nav class="mt-6 px-4">
+        <a href="index.html" class="nav-item">Dashboard</a>
+        <a href="scan.html" class="nav-item">Scan Attendance</a>
+        <a href="reports.html" class="nav-active">Reports</a>
+        <a href="settings.html" class="nav-item">Settings</a>
+      </nav>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="flex-1 p-6">
+      <h1 class="text-2xl font-semibold">Attendance Reports</h1>
+      <p class="text-sm text-slate-500">View attendance records</p>
+
+      <div class="card mt-6">
+        <h3 class="text-lg font-medium">Overview</h3>
+
+        <div class="mt-4 overflow-x-auto" id="reportTable">
+          Loading attendance records...
+        </div>
+      </div>
+    </main>
   </div>
 
 <script>
-async function load(){
+async function loadReports() {
   const res = await fetch('/api/attendance');
-  const list = await res.json();
-  const el = document.getElementById('table');
-  if(!list || list.length===0){ el.innerHTML = '<div>No records yet</div>'; return; }
-  let html = '<table><thead><tr><th>ID</th><th>Student</th><th>Time</th></tr></thead><tbody>';
-  list.forEach(r=>{
-    html += `<tr><td>${r.id}</td><td>${r.student_id}</td><td>${new Date(r.timestamp).toLocaleString()}</td></tr>`;
+  const data = await res.json();
+  const container = document.getElementById('reportTable');
+
+  if (!data.length) {
+    container.innerHTML = "<div class='text-slate-500'>No attendance data yet.</div>";
+    return;
+  }
+
+  let html = `
+    <table class='table'>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Student</th>
+          <th>Course</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  data.reverse().forEach(r => {
+    html += `
+      <tr>
+        <td>${r.id}</td>
+        <td>${r.student_id}</td>
+        <td>${r.course || '-'}</td>
+        <td>${new Date(r.timestamp).toLocaleString()}</td>
+      </tr>
+    `;
   });
-  html += '</tbody></table>';
-  el.innerHTML = html;
+
+  html += "</tbody></table>";
+  container.innerHTML = html;
 }
-load();
+
+loadReports();
 </script>
+
 </body>
 </html>

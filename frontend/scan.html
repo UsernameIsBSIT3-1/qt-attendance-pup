@@ -1,65 +1,148 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>QR Scanner - PUP Attendance</title>
-  <link rel="stylesheet" href="css/style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Scan Attendance — PUP</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
-  <div class="app">
-    <div class="sidebar">
-      <h2>Group 10</h2>
-      <div style="font-size:13px;color:#cfd8dc">QR Attendance</div>
-      <button onclick="location.href='index.html'">Dashboard</button>
-      <button onclick="location.href='scan.html'">Scan</button>
-      <button onclick="location.href='reports.html'">Reports</button>
-    </div>
 
-    <div class="main">
-      <div class="header">
-        <h1>Scanner</h1>
-        <div></div>
-      </div>
+<body class="bg-slate-50 text-slate-800">
+  <div class="min-h-screen flex">
 
-      <div class="card" style="text-align:center">
-        <h3>Live QR Scanner</h3>
-        <div id="reader" style="width:500px; margin: 12px auto;"></div>
-        <p id="scan-result">No scan yet.</p>
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r hidden md:block">
+      <div class="p-6">
+        <div class="font-bold text-xl text-slate-800">Attendance System</div>
+        <div class="text-sm mt-1">Group 10 — PUP</div>
       </div>
-    </div>
+      <nav class="mt-6 px-4">
+        <a href="index.html" class="nav-item">Dashboard</a>
+        <a href="scan.html" class="nav-active">Scan Attendance</a>
+        <a href="reports.html" class="nav-item">Reports</a>
+        <a href="settings.html" class="nav-item">Settings</a>
+      </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 p-6">
+
+      <h1 class="text-2xl font-semibold">Scan Attendance</h1>
+      <p class="text-sm text-slate-500">Scan student QR codes to mark attendance</p>
+
+      <section class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Scanner -->
+        <div class="card">
+          <h3 class="font-medium text-lg">QR Code Scanner</h3>
+          <label class="block mt-4 text-sm">Select Course</label>
+
+          <select id="courseSelect" class="border mt-1 p-2 rounded w-full">
+            <option>CS301 — Data Structures</option>
+            <option>CS405 — Web Development</option>
+            <option>CS502 — Database Systems</option>
+          </select>
+
+          <div class="mt-6">
+            <div id="reader" class="w-full mx-auto" style="max-width:400px;"></div>
+            <div id="scan-status" class="text-sm text-slate-500 mt-2">
+              Scanner is ready. Click start.
+            </div>
+          </div>
+
+          <div class="mt-6 flex gap-3">
+            <button id="startBtn" class="btn-primary">Start Scanning</button>
+            <button id="stopBtn" class="btn-ghost">Stop</button>
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="card">
+          <h3 class="font-medium text-lg">Session Summary</h3>
+
+          <div class="mt-4">
+            <div class="text-sm">Course</div>
+            <div id="sessionCourse" class="font-medium mt-1">Not selected</div>
+          </div>
+
+          <div class="mt-4 grid grid-cols-2 gap-4">
+            <div>
+              <div class="text-sm text-slate-500">Students Scanned</div>
+              <div id="scannedCount" class="text-2xl font-semibold text-sky-600">0</div>
+            </div>
+            <div>
+              <div class="text-sm text-slate-500">Status</div>
+              <div id="sessionStatus" class="text-lg font-medium">Inactive</div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <h4 class="text-sm">Recent Scans</h4>
+            <ul id="recentList" class="mt-3 space-y-1 text-sm"></ul>
+          </div>
+        </div>
+
+      </section>
+    </main>
   </div>
 
 <script src="js/scanner.js"></script>
 <script>
-const resultEl = document.getElementById('scan-result');
+let scanner = null;
+let running = false;
+let scanned = [];
 
-function onScanSuccess(decodedText, decodedResult) {
-  resultEl.innerText = 'Scanned: ' + decodedText;
-  // post to backend & show toast
-  fetch('/api/attendance', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ qr: decodedText })
-  })
-  .then(r => r.json())
-  .then(res => {
-    resultEl.innerText = 'Logged: ' + decodedText + ' (' + new Date().toLocaleTimeString() + ')';
-  })
-  .catch(err => {
-    resultEl.innerText = 'Error logging';
-    console.error(err);
-  });
-}
+const countEl = document.getElementById('scannedCount');
+const listEl = document.getElementById('recentList');
+const statusEl = document.getElementById('sessionStatus');
+const courseEl = document.getElementById('sessionCourse');
+const scanStatus = document.getElementById('scan-status');
 
-function onScanFailure(error) {
-  // console.warn(`QR error: ${error}`);
-}
+document.getElementById('startBtn').onclick = () => {
+  if (running) return;
 
-const html5QrcodeScanner = new Html5QrcodeScanner(
-  "reader", { fps: 10, qrbox: 250 }
-);
-html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+  const course = document.getElementById('courseSelect').value;
+  courseEl.innerText = course;
+  statusEl.innerText = "Active";
+  scanStatus.innerText = "Camera active. Point to a QR code.";
+  running = true;
+
+  scanner = new Html5Qrcode("reader");
+  scanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    (decodedText) => {
+      if (!scanned.includes(decodedText)) {
+        scanned.push(decodedText);
+
+        countEl.innerText = scanned.length;
+
+        const li = document.createElement("li");
+        li.innerHTML = `<span class="font-medium">${decodedText}</span> <span class="text-slate-500 text-xs">(${new Date().toLocaleTimeString()})</span>`;
+        listEl.prepend(li);
+
+        // send to backend
+        fetch('/api/attendance', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ qr: decodedText, course })
+        });
+      }
+    }
+  );
+};
+
+document.getElementById('stopBtn').onclick = () => {
+  if (!running) return;
+  scanner.stop();
+  running = false;
+  statusEl.innerText = "Inactive";
+  scanStatus.innerText = "Scanner stopped.";
+};
 </script>
+
 </body>
 </html>

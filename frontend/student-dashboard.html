@@ -1,0 +1,201 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Student Dashboard — QR Attendance</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="bg-slate-50 text-slate-800">
+  <header class="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
+    <div class="text-xl font-semibold">Attendance System</div>
+    <div>
+      <button id="logoutBtn" class="text-sm">Logout</button>
+    </div>
+  </header>
+
+  <main class="p-6 max-w-6xl mx-auto">
+    <h1 class="text-2xl font-semibold">Student Dashboard</h1>
+    <p id="welcome" class="text-sm text-slate-500">Welcome back</p>
+
+    <section class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="card">
+        <h2 class="text-lg font-medium mb-3">Student Profile</h2>
+        <div id="profileArea">Loading profile...</div>
+      </div>
+
+      <div class="card flex flex-col items-center justify-center">
+        <h2 class="text-lg font-medium mb-4">Your QR Code</h2>
+        <div class="w-40 h-40 bg-slate-200 rounded flex items-center justify-center" id="qrWrap"></div>
+        <p id="qrId" class="mt-3 text-sm text-slate-500"></p>
+      </div>
+
+      <div class="card">
+        <h2 class="text-lg font-medium mb-3">Attendance Stats</h2>
+        <div id="statsArea">Loading stats...</div>
+      </div>
+    </section>
+
+    <section class="mt-6 card">
+      <h3 class="text-lg font-medium mb-3">Recent Attendance History</h3>
+      <div id="history">Loading...</div>
+    </section>
+  </main>
+
+<script src="js/api.js"></script>
+<script>
+/* -----------------------------------------------------------
+   LOAD LOGIN STATE
+----------------------------------------------------------- */
+const user = JSON.parse(localStorage.getItem('user') || "null");
+const authToken = localStorage.getItem("token");
+
+if (!user || !authToken) {
+  console.warn("NO TOKEN FOUND — redirecting...");
+  location.href = "login.html";
+}
+
+/* -----------------------------------------------------------
+   LOGOUT
+----------------------------------------------------------- */
+document.getElementById("logoutBtn").onclick = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  location.href = "login.html";
+};
+
+/* -----------------------------------------------------------
+   GREETING
+----------------------------------------------------------- */
+document.getElementById("welcome").innerText =
+  `Welcome back, ${user.full_name || user.username}`;
+
+/* -----------------------------------------------------------
+   PROFILE RENDER
+----------------------------------------------------------- */
+document.getElementById("profileArea").innerHTML = `
+  <div class="flex items-center gap-4">
+    <div class="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center
+                text-xl font-bold text-slate-600">
+      ${user.full_name ? user.full_name.charAt(0) : user.username.charAt(0)}
+    </div>
+    <div>
+      <div class="font-semibold">${user.full_name || user.username}</div>
+      <div class="text-sm text-slate-500">${user.username}</div>
+    </div>
+  </div>
+
+  <div class="mt-3 text-sm text-slate-600">
+    Program: Bachelor of Science in Information Technology<br>
+    Year Level: 3rd Year
+  </div>
+`;
+
+/* -----------------------------------------------------------
+   QR CODE RENDER
+----------------------------------------------------------- */
+const qrUrl =
+  "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" +
+  encodeURIComponent(user.username);
+
+document.getElementById("qrWrap").innerHTML =
+  `<img src="${qrUrl}" class="w-full h-full" />`;
+
+document.getElementById("qrId").innerText = `Student ID: ${user.username}`;
+
+/* -----------------------------------------------------------
+   LOAD ATTENDANCE (from backend)
+----------------------------------------------------------- */
+async function loadAttendance() {
+  let data = [];
+
+  try {
+    const res = await fetch(
+      window.location.origin + "/api/attendance/me",
+      {
+        headers: authHeaders()
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error("HTTP " + res.status);
+    }
+
+    data = await res.json();
+  } catch (err) {
+    document.getElementById("history").innerHTML =
+      `<div class="text-red-600">Error loading attendance.</div>`;
+    console.error("FETCH ERROR:", err);
+    return;
+  }
+
+  renderHistory(data);
+  renderStats(data);
+}
+
+/* -----------------------------------------------------------
+   RENDER HISTORY TABLE
+----------------------------------------------------------- */
+function renderHistory(data) {
+  if (!data || data.length === 0) {
+    document.getElementById("history").innerHTML =
+      `<div class="text-slate-500">No attendance records yet.</div>`;
+    return;
+  }
+
+  let html = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Course</th>
+          <th>Date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  data.forEach(row => {
+    html += `
+      <tr>
+        <td>${row.course_name || row.course_code || "-"}</td>
+        <td>${new Date(row.timestamp).toLocaleString()}</td>
+        <td>${row.status}</td>
+      </tr>
+    `;
+  });
+
+  html += "</tbody></table>";
+
+  document.getElementById("history").innerHTML = html;
+}
+
+/* -----------------------------------------------------------
+   RENDER STATS
+----------------------------------------------------------- */
+function renderStats(data) {
+  if (!data || data.length === 0) {
+    document.getElementById("statsArea").innerHTML =
+      `<div class="text-slate-500">No data available</div>`;
+    return;
+  }
+
+  const total = data.length;
+  const present = data.filter(x => x.status === "PRESENT").length;
+  const rate = total ? Math.round((present / total) * 1000) / 10 : 0;
+
+  document.getElementById("statsArea").innerHTML = `
+    <div class="text-sm">
+      Present: <strong>${present}</strong> / ${total}<br>
+      Attendance Rate: <strong>${rate}%</strong>
+    </div>
+  `;
+}
+
+/* -----------------------------------------------------------
+   RUN EVERYTHING
+----------------------------------------------------------- */
+loadAttendance();
+</script>
+</body>
+</html>

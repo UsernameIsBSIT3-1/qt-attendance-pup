@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Login — QR Attendance</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-100 to-slate-200 min-h-screen flex items-center justify-center p-4">
+
+  <div class="bg-white w-full max-w-md p-8 rounded-2xl shadow-xl">
+    <h2 class="text-2xl font-semibold text-center mb-2">University Attendance System</h2>
+    <p class="text-center text-sm text-slate-500 mb-6">Login with the seeded accounts (see README) or create users via API</p>
+
+    <div>
+      <label class="text-sm text-slate-600">Username</label>
+      <input id="username" class="input mt-1 w-full p-2 border rounded-lg" />
+      <label class="text-sm text-slate-600 block mt-4">Password</label>
+      <input id="password" type="password" class="input mt-1 w-full p-2 border rounded-lg" />
+    </div>
+
+    <button id="loginBtn" class="btn-primary w-full mt-6">Login</button>
+
+    <div id="msg" class="mt-4 text-sm text-red-600"></div>
+  </div>
+
+<script src="js/api.js"></script>
+<script>
+document.getElementById('loginBtn').onclick = async () => {
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value.trim();
+  if (!u || !p) { document.getElementById('msg').innerText = 'Enter credentials'; return; }
+
+  const data = await login(u, p);
+  if (data && data.token) {
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    // redirect by role
+    if (data.user.role === 'student') location.href = 'student-dashboard.html';
+    else location.href = 'index.html';
+  } else {
+    document.getElementById('msg').innerText = (data && data.error) ? data.error : 'Login failed';
+  }
+};
+</script>
+</body>
+</html>
