@@ -1,201 +1,254 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Student Dashboard — QR Attendance</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Portal — PUP</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{pup:{maroon:'#800000',gold:'#DAA520'}}}}}</script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/style.css" />
 </head>
-<body class="bg-slate-50 text-slate-800">
-  <header class="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
-    <div class="text-xl font-semibold">Attendance System</div>
-    <div>
-      <button id="logoutBtn" class="text-sm">Logout</button>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+  
+  <div class="overlay" onclick="toggleSidebar()"></div>
+  
+  <div id="excuseModal" class="fixed inset-0 bg-black/60 hidden backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden">
+      <div class="bg-[#800000] px-6 py-4 flex justify-between items-center">
+        <h3 class="text-white font-semibold text-lg">File Excuse</h3>
+        <button onclick="document.getElementById('excuseModal').classList.add('hidden')" class="text-white hover:text-[#DAA520]"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-6">
+        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Select Course</label>
+        <select id="ex_course" class="input mb-3"><option>Loading...</option></select>
+        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Date of Absence</label>
+        <input type="date" id="ex_date" class="input mb-3">
+        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Reason</label>
+        <textarea id="ex_reason" class="input h-20 mb-4" placeholder="Reason..."></textarea>
+        <button onclick="submitExcuse()" class="btn-primary w-full">Submit</button>
+      </div>
     </div>
-  </header>
+  </div>
 
-  <main class="p-6 max-w-6xl mx-auto">
-    <h1 class="text-2xl font-semibold">Student Dashboard</h1>
-    <p id="welcome" class="text-sm text-slate-500">Welcome back</p>
+  <div class="min-h-screen flex">
+    <aside class="w-64 bg-[#800000] dark:bg-slate-950 text-white flex-col border-r border-slate-700/30">
+      <div class="p-6"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-[#DAA520] rounded-full flex items-center justify-center text-[#800000] shadow-lg"><i class="fa-solid fa-graduation-cap"></i></div><div><div class="font-bold text-lg leading-none">Student</div><div class="text-xs text-slate-300">Portal</div></div></div></div>
+      <nav class="flex-1 px-4 mt-6">
+        <a href="index.html" class="nav-active" id="nav-dash"><i class="fa-solid fa-chart-pie w-6"></i> Dashboard</a>
+        <a href="calendar.html" class="nav-item" id="nav-calendar"><i class="fa-solid fa-calendar-days w-6"></i> Calendar</a>
+        <a href="scan.html" class="nav-item hidden" id="nav-scan"><i class="fa-solid fa-camera w-6"></i> Scan</a>
+        <a href="reports.html" class="nav-item hidden" id="nav-reports"><i class="fa-solid fa-file-csv w-6"></i> Reports</a>
+        <a href="admin.html" class="nav-item hidden" id="nav-admin"><i class="fa-solid fa-user-shield w-6"></i> Admin Panel</a>
+        <a href="help.html" class="nav-item" id="nav-help"><i class="fa-solid fa-circle-question w-6"></i> Help</a>
+        <a href="settings.html" class="nav-item" id="nav-settings"><i class="fa-solid fa-gear w-6"></i> Settings</a>
+      </nav>
+      <div class="p-4 border-t border-white/10"><button onclick="logout()" class="w-full flex items-center gap-2 text-slate-300 hover:text-white px-4 py-2 transition-colors"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</button></div>
+    </aside>
 
-    <section class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div class="card">
-        <h2 class="text-lg font-medium mb-3">Student Profile</h2>
-        <div id="profileArea">Loading profile...</div>
+    <main class="flex-1 p-8 h-screen overflow-y-auto">
+      
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
+        <div class="flex flex-col sm:flex-row items-center gap-6 w-full md:w-auto">
+           <button onclick="toggleSidebar()" class="md:hidden self-start text-slate-600 dark:text-slate-300"><i class="fa-solid fa-bars fa-xl"></i></button>
+           
+           <div class="bg-white p-3 rounded-xl shadow-lg border dark:border-slate-700 dark:bg-slate-800 flex flex-col items-center">
+             <div id="qrcode" class="flex justify-center bg-white p-2"></div>
+             <div class="mt-3 flex items-center gap-2">
+                <label class="text-[10px] font-bold text-slate-500 uppercase">Secure Mode</label>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="secureToggle" onchange="toggleSecureQR()" class="sr-only peer">
+                  <div class="w-7 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-[#800000]"></div>
+                </label>
+             </div>
+             <div id="secureTimer" class="text-[10px] text-[#800000] font-mono h-3 mt-1"></div>
+           </div>
+           
+           <div class="text-center sm:text-left">
+             <h1 class="text-3xl font-bold dark:text-white" id="sName">Student</h1>
+             <p class="text-slate-500 dark:text-slate-400 font-mono text-base mb-2">@<span id="sUser">username</span></p>
+             <div class="flex gap-2 justify-center sm:justify-start">
+               <span id="sYear" class="px-3 py-1 rounded text-sm font-bold bg-slate-100 dark:bg-slate-800 border dark:border-slate-700">Yr -</span>
+               <span id="sSection" class="px-3 py-1 rounded text-sm font-bold bg-slate-100 dark:bg-slate-800 border dark:border-slate-700">Sec -</span>
+             </div>
+           </div>
+        </div>
+        
+        <div class="flex gap-3 w-full md:w-auto justify-center md:justify-end">
+           <button onclick="downloadQR()" class="btn-primary bg-indigo-600 hover:bg-indigo-700 border-none text-sm"><i class="fa-solid fa-download"></i> Save QR</button>
+           <button onclick="toggleTheme()" class="w-10 h-10 rounded-full bg-white dark:bg-slate-800 shadow hover:text-[#DAA520] transition-colors"><i class="fa-solid fa-circle-half-stroke"></i></button>
+        </div>
+      </div>
+      
+      <div id="onlineClassArea" class="hidden mb-6">
+        <div class="card bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800 border-l-4 border-l-emerald-500">
+          <h3 class="font-bold text-emerald-800 dark:text-emerald-300 text-lg mb-2 flex items-center gap-2">
+            <span class="relative flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            Active Online Classes
+          </h3>
+          <p class="text-xs text-emerald-700 dark:text-emerald-400 mb-3">Your professor has enabled online attendance. Click below to check in.</p>
+          <div id="onlineClassList" class="space-y-2"></div>
+        </div>
       </div>
 
-      <div class="card flex flex-col items-center justify-center">
-        <h2 class="text-lg font-medium mb-4">Your QR Code</h2>
-        <div class="w-40 h-40 bg-slate-200 rounded flex items-center justify-center" id="qrWrap"></div>
-        <p id="qrId" class="mt-3 text-sm text-slate-500"></p>
+      <div id="badgesArea" class="flex gap-4 mb-6 overflow-x-auto pb-2 hidden"></div>
+      <div id="announcementArea" class="mb-8 hidden"><h3 class="font-bold text-slate-500 dark:text-slate-400 text-xs uppercase mb-3">📢 Announcements</h3><div id="announcementList" class="space-y-3"></div></div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="card border-l-4 border-green-500"><div class="text-slate-400 text-xs font-bold uppercase">Present</div><div class="text-3xl font-bold text-green-600" id="countPresent">0</div></div>
+        <div class="card border-l-4 border-yellow-500"><div class="text-slate-400 text-xs font-bold uppercase">Late</div><div class="text-3xl font-bold text-yellow-600" id="countLate">0</div></div>
+        <div class="card border-l-4 border-red-500"><div class="text-slate-400 text-xs font-bold uppercase">Absent</div><div class="text-3xl font-bold text-red-600" id="countAbsent">0</div></div>
+        <div class="card border-l-4 border-[#800000] bg-gradient-to-br from-[#800000] to-[#600000] text-white"><div class="text-white/70 text-xs font-bold uppercase">Overall Rate</div><div class="text-3xl font-bold" id="overallRate">0%</div></div>
+      </div>
+      
+      <div class="flex justify-end mb-4"><button onclick="openExcuseModal()" class="btn-primary bg-blue-600 hover:bg-blue-700 border-none"><i class="fa-solid fa-file-medical"></i> File Excuse Letter</button></div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="card lg:col-span-2">
+          <h2 class="text-lg font-bold mb-4 dark:text-white">Course Performance</h2>
+          <div id="courseList" class="space-y-4"><div class="text-slate-400 text-center py-4">Loading courses...</div></div>
+        </div>
+        <div class="card lg:col-span-1">
+          <h2 class="text-lg font-bold mb-4 dark:text-white">Status Distribution</h2>
+          <div class="h-64"><canvas id="statusChart"></canvas></div>
+        </div>
       </div>
 
-      <div class="card">
-        <h2 class="text-lg font-medium mb-3">Attendance Stats</h2>
-        <div id="statsArea">Loading stats...</div>
+      <div class="mt-8">
+        <h2 class="text-lg font-bold mb-4 dark:text-white">Recent Activity</h2>
+        <div class="card p-0 overflow-hidden">
+          <div class="table-container">
+            <table class="w-full text-left">
+              <thead class="bg-slate-50 dark:bg-slate-900/50 text-xs uppercase text-slate-500 dark:text-slate-400 border-b dark:border-slate-700">
+                <tr><th class="p-4">Course</th><th class="p-4">Time</th><th class="p-4 text-center">Status</th></tr>
+              </thead>
+              <tbody id="historyTable" class="text-sm dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-700"><tr><td colspan="3" class="p-6 text-center text-slate-400">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </section>
-
-    <section class="mt-6 card">
-      <h3 class="text-lg font-medium mb-3">Recent Attendance History</h3>
-      <div id="history">Loading...</div>
-    </section>
-  </main>
+    </main>
+  </div>
 
 <script src="js/api.js"></script>
 <script>
-/* -----------------------------------------------------------
-   LOAD LOGIN STATE
------------------------------------------------------------ */
-const user = JSON.parse(localStorage.getItem('user') || "null");
-const authToken = localStorage.getItem("token");
+  checkAuth();
+  const user = JSON.parse(localStorage.getItem('user'));
+  document.getElementById('sName').innerText = user.full_name || "Student";
+  document.getElementById('sUser').innerText = user.username;
+  document.getElementById('sYear').innerText = "Yr " + (user.year || "N/A");
+  document.getElementById('sSection').innerText = "Sec " + (user.section || "N/A");
 
-if (!user || !authToken) {
-  console.warn("NO TOKEN FOUND — redirecting...");
-  location.href = "login.html";
-}
+  let secureInterval = null;
+  let timerInterval = null;
 
-/* -----------------------------------------------------------
-   LOGOUT
------------------------------------------------------------ */
-document.getElementById("logoutBtn").onclick = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  location.href = "login.html";
-};
-
-/* -----------------------------------------------------------
-   GREETING
------------------------------------------------------------ */
-document.getElementById("welcome").innerText =
-  `Welcome back, ${user.full_name || user.username}`;
-
-/* -----------------------------------------------------------
-   PROFILE RENDER
------------------------------------------------------------ */
-document.getElementById("profileArea").innerHTML = `
-  <div class="flex items-center gap-4">
-    <div class="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center
-                text-xl font-bold text-slate-600">
-      ${user.full_name ? user.full_name.charAt(0) : user.username.charAt(0)}
-    </div>
-    <div>
-      <div class="font-semibold">${user.full_name || user.username}</div>
-      <div class="text-sm text-slate-500">${user.username}</div>
-    </div>
-  </div>
-
-  <div class="mt-3 text-sm text-slate-600">
-    Program: Bachelor of Science in Information Technology<br>
-    Year Level: 3rd Year
-  </div>
-`;
-
-/* -----------------------------------------------------------
-   QR CODE RENDER
------------------------------------------------------------ */
-const qrUrl =
-  "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" +
-  encodeURIComponent(user.username);
-
-document.getElementById("qrWrap").innerHTML =
-  `<img src="${qrUrl}" class="w-full h-full" />`;
-
-document.getElementById("qrId").innerText = `Student ID: ${user.username}`;
-
-/* -----------------------------------------------------------
-   LOAD ATTENDANCE (from backend)
------------------------------------------------------------ */
-async function loadAttendance() {
-  let data = [];
-
-  try {
-    const res = await fetch(
-      window.location.origin + "/api/attendance/me",
-      {
-        headers: authHeaders()
+  async function toggleSecureQR() {
+    const isSecure = document.getElementById('secureToggle').checked;
+    const container = document.getElementById("qrcode");
+    const timerDisplay = document.getElementById('secureTimer');
+    
+    if (isSecure) {
+      if(!confirm("Secure QR Mode:\n\nThis generates a new QR code every 30 seconds to prevent sharing. Screenshots will NOT work.\n\nContinue?")) {
+        document.getElementById('secureToggle').checked = false;
+        return;
       }
-    );
-
-    if (!res.ok) {
-      throw new Error("HTTP " + res.status);
+      generateSecure();
+      secureInterval = setInterval(generateSecure, 30000);
+      let timeLeft = 30;
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 0) timeLeft = 30;
+        timerDisplay.innerText = `Refreshing in ${timeLeft}s...`;
+      }, 1000);
+    } else {
+      clearInterval(secureInterval);
+      clearInterval(timerInterval);
+      timerDisplay.innerText = "";
+      container.innerHTML = "";
+      new QRCode(container, { text: user.username, width: 128, height: 128, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.L });
     }
-
-    data = await res.json();
-  } catch (err) {
-    document.getElementById("history").innerHTML =
-      `<div class="text-red-600">Error loading attendance.</div>`;
-    console.error("FETCH ERROR:", err);
-    return;
   }
 
-  renderHistory(data);
-  renderStats(data);
-}
+  async function generateSecure() {
+    try {
+      const res = await getSecureQR();
+      const container = document.getElementById("qrcode");
+      container.innerHTML = "";
+      new QRCode(container, { text: res.qr_data, width: 128, height: 128, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.L }); 
+    } catch(e) {
+      console.error(e);
+      document.getElementById('secureTimer').innerText = "Network Error";
+    }
+  }
+  
+  new QRCode(document.getElementById("qrcode"), { text: user.username, width: 128, height: 128, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.L });
 
-/* -----------------------------------------------------------
-   RENDER HISTORY TABLE
------------------------------------------------------------ */
-function renderHistory(data) {
-  if (!data || data.length === 0) {
-    document.getElementById("history").innerHTML =
-      `<div class="text-slate-500">No attendance records yet.</div>`;
-    return;
+  async function checkOnlineClasses(courses) {
+    const online = courses.filter(c => c.is_online === 1);
+    if (online.length > 0) {
+      document.getElementById('onlineClassArea').classList.remove('hidden');
+      document.getElementById('onlineClassList').innerHTML = online.map(c => `<div class="flex justify-between items-center bg-white dark:bg-slate-800 p-3 rounded border dark:border-slate-700 shadow-sm"><div><div class="font-bold text-slate-800 dark:text-white">${c.code}</div><div class="text-xs text-slate-500">${c.name}</div></div><button onclick="doCheckIn(${c.id})" class="btn-primary bg-emerald-600 hover:bg-emerald-700 text-sm shadow-md animate-bounce-slow"><i class="fa-solid fa-hand-point-up"></i> I'm Present</button></div>`).join('');
+    } else {
+      document.getElementById('onlineClassArea').classList.add('hidden');
+    }
   }
 
-  let html = `
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Course</th>
-          <th>Date</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
-
-  data.forEach(row => {
-    html += `
-      <tr>
-        <td>${row.course_name || row.course_code || "-"}</td>
-        <td>${new Date(row.timestamp).toLocaleString()}</td>
-        <td>${row.status}</td>
-      </tr>
-    `;
-  });
-
-  html += "</tbody></table>";
-
-  document.getElementById("history").innerHTML = html;
-}
-
-/* -----------------------------------------------------------
-   RENDER STATS
------------------------------------------------------------ */
-function renderStats(data) {
-  if (!data || data.length === 0) {
-    document.getElementById("statsArea").innerHTML =
-      `<div class="text-slate-500">No data available</div>`;
-    return;
+  async function doCheckIn(id) {
+    const res = await onlineCheckIn(id);
+    if (res.success) { showToast("Checked in successfully!"); loadData(); }
+    else showToast(res.error, "error");
   }
 
-  const total = data.length;
-  const present = data.filter(x => x.status === "PRESENT").length;
-  const rate = total ? Math.round((present / total) * 1000) / 10 : 0;
+  async function loadData() {
+    try {
+      const [logs, courses, excuses, ann] = await Promise.all([fetchAttendanceMe(), fetchMyCourses(), fetchExcuses(), fetchAnnouncements()]);
+      checkOnlineClasses(courses);
+      document.getElementById('ex_course').innerHTML = courses.map(c=>`<option value="${c.code}">${c.code}</option>`).join('');
+      
+      const present = logs.filter(l=>l.status==='PRESENT').length, late = logs.filter(l=>l.status==='LATE').length, absent = logs.filter(l=>l.status==='ABSENT').length, total = present + late + absent, rate = total > 0 ? Math.round(((present + (late*0.5)) / total) * 100) : 0; 
+      document.getElementById('countPresent').innerText = present; 
+      document.getElementById('countLate').innerText = late; 
+      document.getElementById('countAbsent').innerText = absent; 
+      document.getElementById('overallRate').innerText = rate + "%";
+      
+      new Chart(document.getElementById('statusChart'), { type: 'doughnut', data: { labels: ['Present', 'Late', 'Absent'], datasets: [{ data: [present, late, absent], backgroundColor: ['#22c55e', '#eab308', '#ef4444'], borderWidth: 0 }] }, options: { plugins: { legend: { position: 'bottom' } }, cutout: '70%' } });
+      
+      if(ann.length > 0) {
+        document.getElementById('announcementList').innerHTML = ann.map(a => `<div class="p-4 bg-white dark:bg-slate-800 border-l-4 ${a.type==='alert'?'border-red-500':'border-blue-500'} rounded shadow-sm"><div class="font-bold text-slate-800 dark:text-white">${a.title}</div><div class="text-sm text-slate-600 dark:text-slate-300 mt-1">${a.content}</div><div class="text-xs text-slate-400 mt-2 flex justify-between"><span>${a.created_by}</span><span>${formatDate(a.timestamp)}</span></div></div>`).join('');
+        document.getElementById('announcementArea').classList.remove('hidden');
+      }
 
-  document.getElementById("statsArea").innerHTML = `
-    <div class="text-sm">
-      Present: <strong>${present}</strong> / ${total}<br>
-      Attendance Rate: <strong>${rate}%</strong>
-    </div>
-  `;
-}
+      const courseContainer = document.getElementById('courseList');
+      if(courses.length === 0) courseContainer.innerHTML = '<div class="text-slate-400">No enrolled courses.</div>';
+      else {
+        courseContainer.innerHTML = courses.map(c => {
+          const cLogs = logs.filter(l => l.course_code === c.code), cPres = cLogs.filter(l=>l.status==='PRESENT').length, cTot = cLogs.length, cRate = cTot > 0 ? Math.round((cPres/cTot)*100) : 0;
+          return `<div class="flex items-center gap-4 p-3 rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50"><div class="w-12 h-12 rounded-full bg-white dark:bg-slate-700 flex items-center justify-center font-bold text-[#800000] dark:text-[#DAA520] shadow-sm">${cRate}%</div><div class="flex-1"><div class="flex justify-between mb-1"><div class="font-bold dark:text-white">${c.code} <span class="font-normal text-slate-500 text-sm ml-1 hidden md:inline">${c.name}</span></div><div class="text-xs text-slate-500">${cPres}/${cTot} Sessions</div></div><div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2"><div class="bg-[#800000] dark:bg-[#DAA520] h-2 rounded-full" style="width: ${cRate}%"></div></div></div></div>`;
+        }).join('');
+      }
 
-/* -----------------------------------------------------------
-   RUN EVERYTHING
------------------------------------------------------------ */
-loadAttendance();
+      const tbody = document.getElementById('historyTable');
+      tbody.innerHTML = logs.length ? logs.slice(0,10).map(l => `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50"><td class="p-4 font-bold text-slate-700 dark:text-slate-200">${l.course_code}</td><td class="p-4 text-slate-500 dark:text-slate-400">${formatDate(l.timestamp)} ${formatTime(l.timestamp)}</td><td class="p-4 text-center"><span class="px-2 py-1 rounded text-xs font-bold ${getStatusColor(l.status)}">${l.status}</span></td></tr>`).join('') : "<tr><td colspan='3' class='p-6 text-center text-slate-400'>No records.</td></tr>";
+
+    } catch(e) { console.error(e); }
+  }
+
+  function openExcuseModal() { document.getElementById('excuseModal').classList.remove('hidden'); }
+  async function submitExcuse() {
+    const c=document.getElementById('ex_course').value, d=document.getElementById('ex_date').value, r=document.getElementById('ex_reason').value;
+    if(!c||!d||!r) return showToast("Please fill all fields", 'error');
+    const res = await createExcuse({course_code:c, date:d, reason:r});
+    if(res.success) { showToast("Request submitted"); document.getElementById('excuseModal').classList.add('hidden'); loadData(); }
+    else showToast("Error submitting", 'error');
+  }
+  function getStatusColor(s) { if(s==='LATE') return 'bg-yellow-100 text-yellow-700'; if(s==='ABSENT') return 'bg-red-100 text-red-700'; return 'bg-green-100 text-green-700'; }
+  function downloadQR() { const img = document.querySelector("#qrcode img"); if(img) { const link = document.createElement('a'); link.href = img.src; link.download = `QR-${user.username}.png`; link.click(); } }
+  loadData();
 </script>
 </body>
 </html>

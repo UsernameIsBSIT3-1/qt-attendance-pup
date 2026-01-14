@@ -24,9 +24,9 @@ async function authMiddleware(req, res, next) {
   const payload = verifyToken(token);
   if (!payload) return res.status(401).json({ error: 'invalid_token' });
 
-  // attach user info from DB using async helper
+  // attach user info from DB (Updated to fetch 'year')
   try {
-    const user = await get('SELECT id, username, role, full_name FROM users WHERE id = ?', [payload.id]);
+    const user = await get('SELECT id, username, role, full_name, year, section FROM users WHERE id = ?', [payload.id]);
     if (!user) return res.status(401).json({ error: 'no_user' });
     req.user = user;
     next();

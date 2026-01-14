@@ -1,4 +1,17 @@
+# Dependencies
 node_modules/
-data/
-.env
+
+# Database (Local SQLite file shouldn't be shared usually)
+data/attendance.db
+data/*.db
+
+# System Files
 .DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log
+*.log
+
+# Environment variables
+.env

@@ -1,20 +1,31 @@
 {
-  "name": "qt-attendance-pup",
-  "version": "1.0.0",
-  "description": "QR Code Attendance System Prototype (SQLite)",
+  "name": "pup-attendance-system",
+  "version": "2.0.0",
+  "description": "A feature-rich QR attendance system with Admin, Professor, and Student portals.",
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",
-    "dev": "nodemon backend/server.js"
+    "dev": "nodemon backend/server.js",
+    "init-db": "node -e 'require(\"./backend/db.js\")'"
   },
+  "keywords": [
+    "attendance",
+    "qrcode",
+    "pup",
+    "education",
+    "express",
+    "sqlite"
+  ],
+  "author": "Group 10",
+  "license": "MIT",
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.0",
-    "sqlite3": "^5.1.7"
+    "jsonwebtoken": "^9.0.2",
+    "sqlite3": "^5.1.6"
   },
   "devDependencies": {
-    "nodemon": "^2.0.22"
+    "nodemon": "^3.0.1"
   }
 }

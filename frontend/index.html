@@ -2,151 +2,80 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PUP QR Attendance — Dashboard</title>
-
-  <!-- Tailwind CDN -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — PUP</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{pup:{maroon:'#800000',gold:'#DAA520'}}}}}</script>
+  <script>if(localStorage.theme==='dark'||(!('theme' in localStorage)&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');else document.documentElement.classList.remove('dark');</script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/style.css" />
 </head>
-<body class="bg-slate-50 text-slate-800">
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+  
+  <div class="overlay" onclick="toggleSidebar()"></div>
+
   <div class="min-h-screen flex">
-
-    <!-- SIDEBAR -->
-    <aside class="w-64 bg-white border-r hidden md:block">
+    <aside class="w-64 bg-[#800000] dark:bg-slate-950 text-white flex-col border-r border-slate-700/30">
       <div class="p-6">
-        <div class="font-bold text-xl text-slate-800">Attendance System</div>
-        <div class="mt-2 text-sm text-slate-500">Group 10 — PUP Parañaque</div>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-[#DAA520] rounded-full flex items-center justify-center text-[#800000] shadow-lg"><i class="fa-solid fa-graduation-cap"></i></div>
+          <div><div class="font-bold text-lg leading-none">PUP</div><div class="text-xs text-slate-300">Attendance</div></div>
+        </div>
       </div>
-
-      <nav class="mt-6 px-4">
-        <a href="index.html" class="nav-active">Dashboard</a>
-        <a href="scan.html" class="nav-item">Scan Attendance</a>
-        <a href="reports.html" class="nav-item">Reports</a>
-        <a href="settings.html" class="nav-item">Settings</a>
+      <nav class="flex-1 px-4 mt-6">
+        <a href="index.html" class="nav-active" id="nav-dash"><i class="fa-solid fa-chart-pie w-6"></i> Dashboard</a>
+        <a href="calendar.html" class="nav-item" id="nav-calendar"><i class="fa-solid fa-calendar-days w-6"></i> Calendar</a>
+        <a href="scan.html" class="nav-item" id="nav-scan"><i class="fa-solid fa-camera w-6"></i> Scan</a>
+        <a href="reports.html" class="nav-item" id="nav-reports"><i class="fa-solid fa-file-csv w-6"></i> Reports</a>
+        <a href="admin.html" class="nav-item hidden" id="nav-admin"><i class="fa-solid fa-user-shield w-6"></i> Admin Panel</a>
+        <a href="help.html" class="nav-item" id="nav-help"><i class="fa-solid fa-circle-question w-6"></i> Help</a>
+        <a href="settings.html" class="nav-item" id="nav-settings"><i class="fa-solid fa-gear w-6"></i> Settings</a>
       </nav>
+      <div class="p-4 border-t border-white/10"><button onclick="logout()" class="w-full flex items-center gap-2 text-slate-300 hover:text-white px-4 py-2 transition-colors"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</button></div>
     </aside>
 
-    <!-- MAIN -->
-    <main class="flex-1 p-6">
-
-      <!-- HEADER -->
-      <header class="flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-semibold text-slate-800">Welcome back, Professor</h1>
-          <p class="text-sm text-slate-500">Computer Science Department</p>
+    <main class="flex-1 p-8 h-screen overflow-y-auto">
+      <header class="flex justify-between items-center mb-8">
+        <div class="flex items-center gap-4">
+          <button onclick="toggleSidebar()" class="md:hidden text-slate-600 dark:text-slate-300 hover:text-[#800000] transition-colors p-2"><i class="fa-solid fa-bars fa-xl"></i></button>
+          <div>
+            <h1 class="text-2xl font-bold dark:text-white" id="welcomeMsg">Welcome</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Department of Computer Science</p>
+          </div>
         </div>
-        <button onclick="location.href='scan.html'" class="btn-primary">Scan Attendance</button>
+        <button onclick="toggleTheme()" class="w-10 h-10 rounded-full bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-[#800000] dark:hover:text-[#DAA520] transition-colors"><i class="fa-solid fa-circle-half-stroke"></i></button>
       </header>
 
-      <!-- STATS -->
-      <section class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="card">
-          <div class="text-sm text-slate-500">Total Classes</div>
-          <div class="text-2xl font-semibold mt-2">3</div>
-        </div>
-
-        <div class="card">
-          <div class="text-sm text-slate-500">Total Students</div>
-          <div class="text-2xl font-semibold mt-2">125</div>
-        </div>
-
-        <div class="card">
-          <div class="text-sm text-slate-500">Avg Attendance</div>
-          <div class="text-2xl font-semibold mt-2">93.5%</div>
-        </div>
+      <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="card bg-gradient-to-br from-[#800000] to-[#500000] text-white border-none shadow-lg shadow-[#800000]/20"><div class="text-white/70 text-sm font-semibold uppercase tracking-wider">Total Classes</div><div class="text-4xl font-bold mt-2" id="statClasses">-</div><i class="fa-solid fa-chalkboard absolute top-6 right-6 text-white/10 fa-3x"></i></div>
+        <div class="card dark:bg-slate-800 border-l-4 border-l-blue-500"><div class="text-slate-500 dark:text-slate-400 text-sm font-semibold uppercase tracking-wider">Total Students</div><div class="text-4xl font-bold mt-2 text-slate-800 dark:text-white" id="statStudents">-</div></div>
+        <div class="card dark:bg-slate-800 border-l-4 border-l-emerald-500"><div class="text-slate-500 dark:text-slate-400 text-sm font-semibold uppercase tracking-wider">Avg. Attendance</div><div class="text-4xl font-bold mt-2 text-emerald-600 dark:text-emerald-400" id="statRate">-</div></div>
       </section>
-
-      <!-- CLASSES TABLE -->
-      <section class="mt-6">
-        <div class="card">
-          <h2 class="text-lg font-medium">Your Classes</h2>
-
-          <div class="mt-4 overflow-x-auto">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Course Code</th>
-                  <th>Course Name</th>
-                  <th>Students</th>
-                  <th>Schedule</th>
-                </tr>
-              </thead>
-              <tbody id="classesBody">
-                <!-- Filled by JS -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- RECENT SESSION -->
-      <section class="mt-6">
-        <div class="card">
-          <h3 class="text-lg font-medium">Recent Attendance Sessions</h3>
-
-          <div class="mt-4 overflow-x-auto">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Class</th>
-                  <th>Date</th>
-                  <th>Present</th>
-                  <th>Absent</th>
-                  <th>Rate</th>
-                </tr>
-              </thead>
-              <tbody id="recentTable"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="card lg:col-span-2"><h2 class="text-lg font-bold mb-4 dark:text-white flex items-center gap-2"><i class="fa-solid fa-chart-line text-[#800000] dark:text-[#DAA520]"></i> Attendance Trends</h2><div class="h-64"><canvas id="attendanceChart"></canvas></div></div>
+        <div class="card lg:col-span-1 p-0 overflow-hidden"><div class="bg-slate-50 dark:bg-slate-800/50 p-4 border-b dark:border-slate-700 font-bold uppercase text-xs text-slate-500 tracking-wider">Your Classes</div><div class="table-container"><table class="w-full text-left"><tbody id="classesBody" class="text-sm dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-700"><tr><td class="p-6 text-center text-slate-400">Loading classes...</td></tr></tbody></table></div></div>
+      </div>
     </main>
   </div>
-
 <script src="js/api.js"></script>
 <script>
-  // Fake data for display
-  const classes = [
-    {code:'CS301', name:'Data Structures', students:45, sched:'Mon, Wed 9:00 AM'},
-    {code:'CS405', name:'Web Development', students:38, sched:'Tue, Thu 11:00 AM'},
-    {code:'CS502', name:'Database Systems', students:42, sched:'Mon, Wed 2:00 PM'}
-  ];
-
-  const recent = [
-    ['Data Structures','2025-10-06','42','3','93.3%'],
-    ['Web Development','2025-10-06','35','3','92.1%'],
-    ['Database Systems','2025-10-05','40','2','95.2%']
-  ];
-
-  // Fill class table
-  const clBody = document.getElementById('classesBody');
-  classes.forEach(c => {
-    clBody.innerHTML += `
-      <tr>
-        <td>${c.code}</td>
-        <td>${c.name}</td>
-        <td>${c.students}</td>
-        <td>${c.sched}</td>
-      </tr>
-    `;
-  });
-
-  // Fill recent sessions
-  const rBody = document.getElementById('recentTable');
-  recent.forEach(r => {
-    rBody.innerHTML += `
-      <tr>
-        <td>${r[0]}</td>
-        <td>${r[1]}</td>
-        <td><span class="pill-blue">${r[2]}</span></td>
-        <td><span class="pill-red">${r[3]}</span></td>
-        <td class="text-green-600 font-medium">${r[4]}</td>
-      </tr>
-    `;
-  });
+  checkAuth();
+  const user = JSON.parse(localStorage.getItem('user'));
+  document.getElementById('welcomeMsg').innerText = `Welcome back, ${user.full_name || user.username}`;
+  async function loadDashboard() {
+    try {
+      const stats = await fetchStats();
+      document.getElementById('statClasses').innerText = stats.classes; document.getElementById('statStudents').innerText = stats.students; document.getElementById('statRate').innerText = stats.rate;
+      new Chart(document.getElementById('attendanceChart').getContext('2d'), { type: 'line', data: { labels: stats.chart.map(d=>formatDate(d.date)), datasets: [{ label: 'Students Present', data: stats.chart.map(d=>d.count), borderColor: '#DAA520', backgroundColor: (c)=>{const ctx=c.chart.ctx,g=ctx.createLinearGradient(0,0,0,200);g.addColorStop(0,'rgba(218,165,32,0.3)');g.addColorStop(1,'rgba(218,165,32,0)');return g;}, tension: 0.4, fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } } } });
+    } catch(e){}
+    try {
+      const [courses, logs] = await Promise.all([fetchCourses(), fetchAttendance()]);
+      const tbody = document.getElementById('classesBody');
+      tbody.innerHTML = courses.length ? courses.map(c => `<tr onclick="location.href='class-details.html?code=${c.code}'" class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group"><td class="p-4"><div class="flex items-center justify-between"><div><div class="font-bold text-[#800000] dark:text-[#DAA520] group-hover:underline">${c.code}</div><div class="text-xs text-slate-500 dark:text-slate-400">${c.name}</div></div><i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-[#800000] transition-colors"></i></div></td></tr>`).join('') : '<tr><td class="p-6 text-center text-slate-500">No classes assigned.</td></tr>';
+    } catch(e){}
+  }
+  loadDashboard();
 </script>
-
 </body>
 </html>

@@ -1,115 +1,131 @@
-// backend/routes/attendance.js (sqlite3 version)
 const express = require('express');
 const router = express.Router();
-const { run, get, all } = require('../db');
+const { run, get, all, getNowPH } = require('../db');
 const { authMiddleware } = require('../auth');
 
-// POST /api/attendance — log attendance
+// POST /api/attendance — Log attendance
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { qr, course } = req.body;
+    const { qr, course, status, remarks } = req.body;
     if (!qr) return res.status(400).json({ error: 'missing_qr' });
+    if (!course) return res.status(400).json({ error: 'missing_course' });
 
-    // try matching student via username or id
-    let student = await get(`SELECT id FROM users WHERE username = ?`, [qr]);
-    let student_id = student ? student.id : null;
+    const courseRow = await get(`SELECT id, secure_qr_mode FROM courses WHERE code = ?`, [course]);
+    if (!courseRow) return res.status(404).json({ error: 'Course not found' });
 
-    // also try numeric user id
-    if (!student_id && /^\d+$/.test(qr)) {
-      let s = await get(`SELECT id FROM users WHERE id = ?`, [Number(qr)]);
-      if (s) student_id = s.id;
+    let studentUsername = qr;
+    let isSecureToken = false;
+    let parsedToken = null;
+
+    try {
+      if (qr.trim().startsWith('{')) {
+        parsedToken = JSON.parse(qr);
+        if (parsedToken.u && parsedToken.exp) isSecureToken = true;
+      }
+    } catch (e) {}
+
+    if (courseRow.secure_qr_mode) {
+      if (!isSecureToken) return res.status(400).json({ error: 'Secure QR required' });
+      if (parsedToken.exp < Date.now()) return res.status(400).json({ error: 'QR Code Expired' });
+      studentUsername = parsedToken.u;
+    } else {
+      if (isSecureToken) studentUsername = parsedToken.u;
     }
 
-    // match course code like "CS301 — Data Structures"
-    let course_id = null;
-    if (course) {
-      const code = course.split(" ")[0]; // "CS301"
-      const c = await get(`SELECT id FROM courses WHERE code = ?`, [code]);
-      if (c) course_id = c.id;
+    let student = await get(`SELECT id, full_name FROM users WHERE username = ?`, [studentUsername]);
+    if (!student && /^\d+$/.test(studentUsername)) {
+      student = await get(`SELECT id, full_name FROM users WHERE id = ?`, [Number(studentUsername)]);
     }
+    if (!student) return res.status(404).json({ error: 'Student not found' });
 
-    const timestamp = new Date().toISOString();
+    const student_id = student.id;
+    const course_id = courseRow.id;
+    const nowPH = getNowPH();
+    const today = nowPH.split('T')[0];
+    
+    const existing = await get(
+      `SELECT id FROM attendance_logs WHERE student_id = ? AND course_id = ? AND timestamp LIKE ?`,
+      [student_id, course_id, `${today}%`]
+    );
+
+    if (existing) return res.status(400).json({ error: 'Already logged today' });
+
+    const finalStatus = status || 'PRESENT';
+    const finalRemarks = remarks || '';
 
     const info = await run(
-      `INSERT INTO attendance_logs (student_id, course_id, student_qr, timestamp, status)
-       VALUES (?, ?, ?, ?, ?)`,
-      [student_id, course_id, qr, timestamp, 'PRESENT']
+      `INSERT INTO attendance_logs (student_id, course_id, student_qr, timestamp, status, remarks)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [student_id, course_id, studentUsername, nowPH, finalStatus, finalRemarks]
     );
 
     return res.json({
       success: true,
-      record: {
-        id: info.lastID,
-        student_id,
-        course_id,
-        student_qr: qr,
-        timestamp,
-        status: 'PRESENT'
-      }
+      record: { id: info.lastID, student_qr: studentUsername, timestamp: nowPH, status: finalStatus, student_name: student.full_name }
     });
 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'server_error' });
-  }
+  } catch (err) { res.status(500).json({ error: 'server_error' }); }
 });
 
-// GET all logs (prof) or own logs (student)
+router.put('/:id', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'professor') return res.status(403).json({ error: 'forbidden' });
+  try {
+    const { status, remarks } = req.body;
+    await run('UPDATE attendance_logs SET status=?, remarks=? WHERE id=?', [status, remarks || '', req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'db_error' }); }
+});
+
+router.delete('/:id', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'professor') return res.status(403).json({ error: 'forbidden' });
+  try { await run('DELETE FROM attendance_logs WHERE id=?', [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ error: 'db_error' }); }
+});
+
+router.delete('/', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'admins_only' });
+  try {
+    await run('DELETE FROM attendance_logs'); 
+    try { await run('DELETE FROM sqlite_sequence WHERE name="attendance_logs"'); } catch(e) {}
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'db_error' }); }
+});
+
+router.get('/stats', authMiddleware, async (req, res) => {
+  try {
+    const totalClasses = (await get(`SELECT COUNT(*) as c FROM courses`)).c;
+    const students = (await get(`SELECT COUNT(*) as c FROM users WHERE role='student'`)).c;
+    const totalLogs = (await get(`SELECT COUNT(*) as c FROM attendance_logs`)).c;
+    const presentLogs = (await get(`SELECT COUNT(*) as c FROM attendance_logs WHERE status='PRESENT'`)).c;
+    const rate = totalLogs > 0 ? Math.round((presentLogs / totalLogs) * 100) : 0;
+    
+    // FIX: substr(timestamp, 1, 10) correctly extracts 'YYYY-MM-DD' in standard SQL
+    const chartData = await all(`
+      SELECT substr(timestamp, 1, 10) as date, COUNT(*) as count 
+      FROM attendance_logs GROUP BY date ORDER BY date DESC LIMIT 7
+    `);
+
+    res.json({ classes: totalClasses, students: students, rate: rate + "%", chart: chartData.reverse() });
+  } catch(err) { res.status(500).json({error: 'db_error'}); }
+});
+
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const user = req.user;
-    let rows;
-
-    if (user.role === 'professor' || user.role === 'admin') {
-      rows = await all(`
-        SELECT al.id, al.student_id, u.username AS student_username,
-               al.student_qr, c.code AS course_code, c.name AS course_name,
-               al.timestamp, al.status
-        FROM attendance_logs al
-        LEFT JOIN users u ON al.student_id = u.id
-        LEFT JOIN courses c ON al.course_id = c.id
-        ORDER BY al.timestamp DESC
-      `);
-    } else {
-      rows = await all(`
-        SELECT al.id, al.student_id, u.username AS student_username,
-               al.student_qr, c.code AS course_code, c.name AS course_name,
-               al.timestamp, al.status
-        FROM attendance_logs al
-        LEFT JOIN users u ON al.student_id = u.id
-        LEFT JOIN courses c ON al.course_id = c.id
-        WHERE al.student_id = ?
-        ORDER BY al.timestamp DESC
-      `, [user.id]);
-    }
-
+    let sql = `SELECT al.id, al.student_id, u.username AS student_username, u.full_name AS student_name, al.student_qr, c.code AS course_code, c.name AS course_name, al.timestamp, al.status, al.remarks FROM attendance_logs al LEFT JOIN users u ON al.student_id = u.id LEFT JOIN courses c ON al.course_id = c.id`;
+    if (user.role === 'student') sql += ` WHERE al.student_id = ${user.id}`;
+    sql += ` ORDER BY al.timestamp DESC`;
+    const rows = await all(sql);
     res.json(rows);
-
-  } catch (err) {
-    res.status(500).json({ error: 'server_error' });
-  }
+  } catch (err) { res.status(500).json({ error: 'server_error' }); }
 });
 
-// GET /api/attendance/me — student-only
 router.get('/me', authMiddleware, async (req, res) => {
   try {
     const user = req.user;
     if (user.role !== 'student') return res.status(403).json({ error: 'not_student' });
-
-    const rows = await all(`
-      SELECT al.id, c.code AS course_code, c.name AS course_name,
-             al.timestamp, al.status
-      FROM attendance_logs al
-      LEFT JOIN courses c ON al.course_id = c.id
-      WHERE al.student_id = ?
-      ORDER BY al.timestamp DESC
-    `, [user.id]);
-
+    const rows = await all(`SELECT al.id, c.code AS course_code, c.name AS course_name, al.timestamp, al.status, al.remarks FROM attendance_logs al LEFT JOIN courses c ON al.course_id = c.id WHERE al.student_id = ? ORDER BY al.timestamp DESC`, [user.id]);
     res.json(rows);
-
-  } catch (err) {
-    res.status(500).json({ error: 'server_error' });
-  }
+  } catch (err) { res.status(500).json({ error: 'server_error' }); }
 });
 
 module.exports = router;

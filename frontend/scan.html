@@ -2,147 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Scan Attendance — PUP</title>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scan — PUP</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{pup:{maroon:'#800000',gold:'#DAA520'}}}}}</script>
+  <script>if(localStorage.theme==='dark'||(!('theme' in localStorage)&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');else document.documentElement.classList.remove('dark');</script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/style.css" />
 </head>
-
-<body class="bg-slate-50 text-slate-800">
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+  <div class="overlay" onclick="toggleSidebar()"></div>
+  <div id="manualModal" class="fixed inset-0 bg-black/60 hidden backdrop-blur-sm flex items-center justify-center z-50"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden"><div class="bg-[#800000] px-6 py-4 flex justify-between items-center"><h3 class="text-white font-semibold text-lg">Manual Entry</h3><button onclick="document.getElementById('manualModal').classList.add('hidden')" class="text-white hover:text-[#DAA520]"><i class="fa-solid fa-xmark"></i></button></div><div class="p-6"><label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Student Number</label><input id="manualInput" class="input mb-4" placeholder="e.g. 2023-00164-PQ-0"><button onclick="submitManual()" class="btn-primary w-full">Mark Present</button></div></div></div>
   <div class="min-h-screen flex">
-
-    <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r hidden md:block">
+    <aside class="w-64 bg-[#800000] dark:bg-slate-950 text-white flex-col border-r border-slate-700/30">
       <div class="p-6">
-        <div class="font-bold text-xl text-slate-800">Attendance System</div>
-        <div class="text-sm mt-1">Group 10 — PUP</div>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-[#DAA520] rounded-full flex items-center justify-center text-[#800000] shadow-lg"><i class="fa-solid fa-graduation-cap"></i></div>
+          <div><div class="font-bold text-lg leading-none">PUP</div><div class="text-xs text-slate-300">Attendance</div></div>
+        </div>
       </div>
-      <nav class="mt-6 px-4">
-        <a href="index.html" class="nav-item">Dashboard</a>
-        <a href="scan.html" class="nav-active">Scan Attendance</a>
-        <a href="reports.html" class="nav-item">Reports</a>
-        <a href="settings.html" class="nav-item">Settings</a>
+      <nav class="flex-1 px-4 mt-6">
+        <a href="index.html" class="nav-item" id="nav-dash"><i class="fa-solid fa-chart-pie w-6"></i> Dashboard</a>
+        <a href="calendar.html" class="nav-item" id="nav-calendar"><i class="fa-solid fa-calendar-days w-6"></i> Calendar</a>
+        <a href="scan.html" class="nav-active" id="nav-scan"><i class="fa-solid fa-camera w-6"></i> Scan</a>
+        <a href="reports.html" class="nav-item" id="nav-reports"><i class="fa-solid fa-file-csv w-6"></i> Reports</a>
+        <a href="admin.html" class="nav-item hidden" id="nav-admin"><i class="fa-solid fa-user-shield w-6"></i> Admin Panel</a>
+        <a href="help.html" class="nav-item" id="nav-help"><i class="fa-solid fa-circle-question w-6"></i> Help</a>
+        <a href="settings.html" class="nav-item" id="nav-settings"><i class="fa-solid fa-gear w-6"></i> Settings</a>
       </nav>
+      <div class="p-4 border-t border-white/10"><button onclick="logout()" class="w-full flex items-center gap-2 text-slate-300 hover:text-white px-4 py-2 transition-colors"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</button></div>
     </aside>
-
-    <!-- Main -->
-    <main class="flex-1 p-6">
-
-      <h1 class="text-2xl font-semibold">Scan Attendance</h1>
-      <p class="text-sm text-slate-500">Scan student QR codes to mark attendance</p>
-
-      <section class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        <!-- Scanner -->
-        <div class="card">
-          <h3 class="font-medium text-lg">QR Code Scanner</h3>
-          <label class="block mt-4 text-sm">Select Course</label>
-
-          <select id="courseSelect" class="border mt-1 p-2 rounded w-full">
-            <option>CS301 — Data Structures</option>
-            <option>CS405 — Web Development</option>
-            <option>CS502 — Database Systems</option>
-          </select>
-
-          <div class="mt-6">
-            <div id="reader" class="w-full mx-auto" style="max-width:400px;"></div>
-            <div id="scan-status" class="text-sm text-slate-500 mt-2">
-              Scanner is ready. Click start.
-            </div>
-          </div>
-
-          <div class="mt-6 flex gap-3">
-            <button id="startBtn" class="btn-primary">Start Scanning</button>
-            <button id="stopBtn" class="btn-ghost">Stop</button>
+    <main class="flex-1 p-8 h-screen overflow-y-auto">
+      <div class="flex justify-between items-center mb-6">
+        <div class="flex items-center gap-4"><button onclick="toggleSidebar()" class="md:hidden text-slate-600 dark:text-slate-300"><i class="fa-solid fa-bars fa-xl"></i></button><h1 class="text-2xl font-bold dark:text-white">Scan Attendance</h1></div>
+        <button onclick="document.getElementById('manualModal').classList.remove('hidden')" class="btn-primary bg-indigo-600 hover:bg-indigo-700 border-none"><i class="fa-solid fa-keyboard"></i> Manual Entry</button>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="card h-fit"><h3 class="font-bold text-lg mb-4 dark:text-white">QR Code Scanner</h3><label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Select Course</label><select id="courseSelect" class="input mb-6"><option value="" disabled selected>Loading courses...</option></select>
+          <div class="bg-black rounded-lg overflow-hidden relative shadow-inner border border-slate-700" style="min-height: 300px;"><div id="reader" class="w-full h-full"></div><div class="absolute inset-0 border-2 border-[#DAA520]/50 pointer-events-none m-12 rounded-lg"></div></div>
+          <div id="scan-status" class="text-center text-sm text-slate-500 dark:text-slate-400 mt-4 h-5">Ready to start.</div>
+          <div class="flex gap-4 mt-6 justify-center">
+            <button id="startBtn" class="btn-primary w-32 shadow-lg hover:shadow-[#DAA520]/20"><i class="fa-solid fa-play"></i> Start</button>
+            <button id="stopBtn" class="px-4 py-2 rounded-lg font-medium border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors w-32 flex items-center justify-center gap-2" disabled><i class="fa-solid fa-stop"></i> Stop</button>
           </div>
         </div>
-
-        <!-- Summary -->
-        <div class="card">
-          <h3 class="font-medium text-lg">Session Summary</h3>
-
-          <div class="mt-4">
-            <div class="text-sm">Course</div>
-            <div id="sessionCourse" class="font-medium mt-1">Not selected</div>
-          </div>
-
-          <div class="mt-4 grid grid-cols-2 gap-4">
-            <div>
-              <div class="text-sm text-slate-500">Students Scanned</div>
-              <div id="scannedCount" class="text-2xl font-semibold text-sky-600">0</div>
-            </div>
-            <div>
-              <div class="text-sm text-slate-500">Status</div>
-              <div id="sessionStatus" class="text-lg font-medium">Inactive</div>
-            </div>
-          </div>
-
-          <div class="mt-6">
-            <h4 class="text-sm">Recent Scans</h4>
-            <ul id="recentList" class="mt-3 space-y-1 text-sm"></ul>
-          </div>
-        </div>
-
-      </section>
+        <div class="card h-full flex flex-col"><div class="flex justify-between items-center mb-6 pb-4 border-b dark:border-slate-700"><div><h3 class="font-bold text-lg dark:text-white">Live Session</h3><div id="sessionCourse" class="text-sm text-[#800000] dark:text-[#DAA520] font-medium mt-1">None selected</div></div><div class="text-right"><div class="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold">Scanned</div><div id="scannedCount" class="text-4xl font-bold text-slate-800 dark:text-white leading-none mt-1">0</div></div></div><div class="flex-1 overflow-hidden flex flex-col"><h4 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-3">Recent Scans</h4><ul id="recentList" class="flex-1 overflow-y-auto space-y-2 pr-2"><li class="text-slate-400 text-center italic mt-10">Waiting for scans...</li></ul></div></div>
+      </div>
     </main>
   </div>
-
+<script src="js/api.js"></script>
 <script src="js/scanner.js"></script>
 <script>
-let scanner = null;
-let running = false;
-let scanned = [];
-
-const countEl = document.getElementById('scannedCount');
-const listEl = document.getElementById('recentList');
-const statusEl = document.getElementById('sessionStatus');
-const courseEl = document.getElementById('sessionCourse');
-const scanStatus = document.getElementById('scan-status');
-
-document.getElementById('startBtn').onclick = () => {
-  if (running) return;
-
-  const course = document.getElementById('courseSelect').value;
-  courseEl.innerText = course;
-  statusEl.innerText = "Active";
-  scanStatus.innerText = "Camera active. Point to a QR code.";
-  running = true;
-
-  scanner = new Html5Qrcode("reader");
-  scanner.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-    (decodedText) => {
-      if (!scanned.includes(decodedText)) {
-        scanned.push(decodedText);
-
-        countEl.innerText = scanned.length;
-
-        const li = document.createElement("li");
-        li.innerHTML = `<span class="font-medium">${decodedText}</span> <span class="text-slate-500 text-xs">(${new Date().toLocaleTimeString()})</span>`;
-        listEl.prepend(li);
-
-        // send to backend
-        fetch('/api/attendance', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ qr: decodedText, course })
-        });
-      }
-    }
-  );
-};
-
-document.getElementById('stopBtn').onclick = () => {
-  if (!running) return;
-  scanner.stop();
-  running = false;
-  statusEl.innerText = "Inactive";
-  scanStatus.innerText = "Scanner stopped.";
-};
+checkAuth();
+if(window.location.pathname.includes('scan.html')) initScannerPage();
 </script>
-
 </body>
 </html>

@@ -2,85 +2,122 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reports — PUP</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{pup:{maroon:'#800000',gold:'#DAA520'}}}}}</script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/style.css" />
 </head>
-
-<body class="bg-slate-50 text-slate-800">
-  <div class="min-h-screen flex">
-
-    <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r hidden md:block">
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+  <div class="overlay" onclick="toggleSidebar()"></div>
+  <div id="editModal" class="fixed inset-0 bg-black/60 hidden backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden">
+      <div class="bg-[#800000] px-6 py-4 flex justify-between items-center"><h3 class="text-white font-semibold text-lg">Edit Record</h3><button onclick="document.getElementById('editModal').classList.add('hidden')" class="text-white hover:text-[#DAA520]"><i class="fa-solid fa-xmark"></i></button></div>
       <div class="p-6">
-        <div class="font-bold text-xl text-slate-800">Attendance System</div>
-        <div class="text-sm mt-1">Group 10 — PUP</div>
+        <input type="hidden" id="edit_id">
+        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Status</label>
+        <select id="edit_status" class="input mb-4"><option value="PRESENT">Present</option><option value="LATE">Late</option><option value="EXCUSED">Excused</option><option value="ABSENT">Absent</option></select>
+        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Remarks</label>
+        <textarea id="edit_remarks" class="input text-sm h-20 mb-4" placeholder="e.g. Forgot ID..."></textarea>
+        <button onclick="saveEdit()" class="btn-primary w-full">Update Status</button>
       </div>
-      <nav class="mt-6 px-4">
-        <a href="index.html" class="nav-item">Dashboard</a>
-        <a href="scan.html" class="nav-item">Scan Attendance</a>
-        <a href="reports.html" class="nav-active">Reports</a>
-        <a href="settings.html" class="nav-item">Settings</a>
-      </nav>
-    </aside>
-
-    <!-- MAIN -->
-    <main class="flex-1 p-6">
-      <h1 class="text-2xl font-semibold">Attendance Reports</h1>
-      <p class="text-sm text-slate-500">View attendance records</p>
-
-      <div class="card mt-6">
-        <h3 class="text-lg font-medium">Overview</h3>
-
-        <div class="mt-4 overflow-x-auto" id="reportTable">
-          Loading attendance records...
-        </div>
-      </div>
-    </main>
+    </div>
   </div>
 
+  <div class="min-h-screen flex">
+    <aside class="w-64 bg-[#800000] dark:bg-slate-950 text-white flex-col border-r border-slate-700/30">
+      <div class="p-6"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-[#DAA520] rounded-full flex items-center justify-center text-[#800000] shadow-lg"><i class="fa-solid fa-graduation-cap"></i></div><div><div class="font-bold text-lg leading-none">PUP</div><div class="text-xs text-slate-300">Attendance</div></div></div></div>
+      <nav class="flex-1 px-4 mt-6">
+        <a href="index.html" class="nav-item" id="nav-dash"><i class="fa-solid fa-chart-pie w-6"></i> Dashboard</a>
+        <a href="calendar.html" class="nav-item" id="nav-calendar"><i class="fa-solid fa-calendar-days w-6"></i> Calendar</a>
+        <a href="scan.html" class="nav-item" id="nav-scan"><i class="fa-solid fa-camera w-6"></i> Scan</a>
+        <a href="reports.html" class="nav-active" id="nav-reports"><i class="fa-solid fa-file-csv w-6"></i> Reports</a>
+        <a href="admin.html" class="nav-item hidden" id="nav-admin"><i class="fa-solid fa-user-shield w-6"></i> Admin Panel</a>
+        <a href="help.html" class="nav-item" id="nav-help"><i class="fa-solid fa-circle-question w-6"></i> Help</a>
+        <a href="settings.html" class="nav-item" id="nav-settings"><i class="fa-solid fa-gear w-6"></i> Settings</a>
+      </nav>
+      <div class="p-4 border-t border-white/10"><button onclick="logout()" class="w-full flex items-center gap-2 text-slate-300 hover:text-white px-4 py-2 transition-colors"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</button></div>
+    </aside>
+
+    <main class="flex-1 p-8 h-screen overflow-y-auto">
+      <div class="flex flex-col md:flex-row justify-between items-end md:items-center mb-6 gap-4">
+        <div class="flex items-center gap-4">
+          <button onclick="toggleSidebar()" class="md:hidden text-slate-600 dark:text-slate-300"><i class="fa-solid fa-bars fa-xl"></i></button>
+          <div><h1 class="text-2xl font-bold dark:text-white">Reports</h1><div class="flex mt-2 bg-slate-200 dark:bg-slate-700 p-1 rounded-lg w-fit"><button onclick="setView('log')" id="btn-log" class="px-3 py-1 text-xs font-bold rounded-md transition-all bg-white dark:bg-slate-600 shadow text-slate-800 dark:text-white">Log View</button><button onclick="setView('summary')" id="btn-summary" class="px-3 py-1 text-xs font-bold rounded-md transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800">Summary View</button></div></div>
+        </div>
+        <div class="flex gap-2 w-full md:w-auto overflow-x-auto items-end">
+           <div class="flex flex-col gap-1"><label class="text-[10px] uppercase font-bold text-slate-400">Date</label><input type="date" id="dateFilter" class="input py-1 text-sm" onchange="filterReports()"></div>
+           <div class="flex flex-col gap-1"><label class="text-[10px] uppercase font-bold text-slate-400">Course</label><select id="courseFilter" class="input py-1 text-sm w-32" onchange="filterReports()"><option value="">All</option></select></div>
+           <div class="flex flex-col gap-1"><label class="text-[10px] uppercase font-bold text-slate-400">Status</label><select id="statusFilter" class="input py-1 text-sm w-28" onchange="filterReports()"><option value="">All</option><option value="PRESENT">Present</option><option value="LATE">Late</option><option value="ABSENT">Absent</option><option value="EXCUSED">Excused</option></select></div>
+           <button onclick="downloadExcel()" class="btn-primary bg-emerald-600 hover:bg-emerald-700 text-sm px-3 h-9"><i class="fa-solid fa-file-excel"></i> Excel</button>
+           <button onclick="downloadPDF()" class="btn-primary bg-red-600 hover:bg-red-700 text-sm px-3 h-9"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+        </div>
+      </div>
+      
+      <div id="aiSummary" class="hidden bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 p-4 rounded-lg mb-4 flex justify-between items-center">
+         <div><div class="font-bold text-indigo-800 dark:text-indigo-300 text-sm uppercase">AI Prediction</div><div class="text-xs text-indigo-600 dark:text-indigo-400" id="aiText">Loading...</div></div>
+         <div class="text-2xl font-bold text-indigo-700 dark:text-indigo-300" id="aiProj">--%</div>
+      </div>
+
+      <div class="card p-0 overflow-hidden"><div class="table-container"><table class="w-full text-left"><thead class="bg-slate-50 dark:bg-slate-900/50 text-xs uppercase text-slate-500 dark:text-slate-400 font-bold border-b dark:border-slate-700"><tr id="tableHead"></tr></thead><tbody id="reportTable" class="text-sm dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-700"><tr><td class="p-8 text-center text-slate-400">Loading...</td></tr></tbody></table></div></div>
+    </main>
+  </div>
+<script src="js/api.js"></script>
 <script>
-async function loadReports() {
-  const res = await fetch('/api/attendance');
-  const data = await res.json();
-  const container = document.getElementById('reportTable');
-
-  if (!data.length) {
-    container.innerHTML = "<div class='text-slate-500'>No attendance data yet.</div>";
-    return;
-  }
-
-  let html = `
-    <table class='table'>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Student</th>
-          <th>Course</th>
-          <th>Timestamp</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
-
-  data.reverse().forEach(r => {
-    html += `
-      <tr>
-        <td>${r.id}</td>
-        <td>${r.student_id}</td>
-        <td>${r.course || '-'}</td>
-        <td>${new Date(r.timestamp).toLocaleString()}</td>
-      </tr>
-    `;
-  });
-
-  html += "</tbody></table>";
-  container.innerHTML = html;
+checkAuth(); let allLogs=[], courses=[], currentView='log';
+async function init(){ courses=await fetchCourses(); document.getElementById('courseFilter').innerHTML += courses.map(x=>`<option value="${x.code}">${x.code}</option>`).join(''); allLogs=await fetchAttendance(); filterReports(); }
+function setView(v){ currentView=v; document.getElementById('btn-log').className=v==='log'?"px-3 py-1 text-xs font-bold rounded-md transition-all bg-white dark:bg-slate-600 shadow text-slate-800 dark:text-white":"px-3 py-1 text-xs font-bold rounded-md transition-all text-slate-500 dark:text-slate-400"; document.getElementById('btn-summary').className=v==='summary'?"px-3 py-1 text-xs font-bold rounded-md transition-all bg-white dark:bg-slate-600 shadow text-slate-800 dark:text-white":"px-3 py-1 text-xs font-bold rounded-md transition-all text-slate-500 dark:text-slate-400"; filterReports(); }
+async function filterReports(){ 
+  const code=document.getElementById('courseFilter').value; const date=document.getElementById('dateFilter').value; const status=document.getElementById('statusFilter').value;
+  let f=allLogs; if(code) f=f.filter(l=>l.course_code===code); if(date) f=f.filter(l=>l.timestamp.startsWith(date)); if(status) f=f.filter(l=>l.status===status);
+  const aiWidget = document.getElementById('aiSummary');
+  if(code && courses.find(c=>c.code===code)) {
+    aiWidget.classList.remove('hidden'); const cID = courses.find(c=>c.code===code).id;
+    try { const pred = await getPrediction(cID); document.getElementById('aiText').innerText = pred.prediction; document.getElementById('aiProj').innerText = pred.projected_rate || "--%"; } catch(e){}
+  } else { aiWidget.classList.add('hidden'); }
+  currentView==='log'?renderLogTable(f):renderSummaryTable(f); 
 }
-
-loadReports();
+function renderLogTable(d){ 
+  document.getElementById('tableHead').innerHTML=`<th class="p-4">Student</th><th class="p-4">Course</th><th class="p-4">Time</th><th class="p-4 text-center">Status</th><th class="p-4">Remarks</th><th class="p-4 text-right">Actions</th>`; 
+  const t=document.getElementById('reportTable'); 
+  if(!d.length)return t.innerHTML="<tr><td colspan='6' class='p-8 text-center text-slate-400'>No records found.</td></tr>"; 
+  t.innerHTML=d.map(r=>`<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"><td class="p-4 font-medium"><div class="text-slate-800 dark:text-white">${r.student_name||r.student_username||'Unknown'}</div></td><td class="p-4"><span class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded text-xs font-bold border border-slate-200 dark:border-slate-700">${r.course_code||'-'}</span></td><td class="p-4 text-slate-500 dark:text-slate-400">${formatDate(r.timestamp)} ${formatTime(r.timestamp)}</td><td class="p-4 text-center"><span class="px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(r.status)} shadow-sm">${r.status}</span></td><td class="p-4 text-sm text-slate-500 italic">${r.remarks||'-'}</td><td class="p-4 text-right"><button onclick="openEdit(${r.id}, '${r.status}', '${r.remarks||''}')" class="text-blue-500 hover:text-blue-700 mr-3"><i class="fa-solid fa-pen"></i></button><button onclick="removeLog(${r.id})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''); 
+}
+function renderSummaryTable(d){ 
+  document.getElementById('tableHead').innerHTML=`<th class="p-4">Student</th><th class="p-4 text-center">Present</th><th class="p-4 text-center">Late</th><th class="p-4 text-center">Absent</th><th class="p-4 text-center">Total Activity</th>`; 
+  const t=document.getElementById('reportTable'); 
+  if(!d.length)return t.innerHTML="<tr><td colspan='5' class='p-8 text-center text-slate-400'>No records found.</td></tr>"; 
+  const s={}; d.forEach(l=>{const n=l.student_name||l.student_username||"Unknown"; if(!s[n])s[n]={present:0,late:0,absent:0,total:0}; if(l.status==='PRESENT')s[n].present++; else if(l.status==='LATE')s[n].late++; else if(l.status==='ABSENT')s[n].absent++; s[n].total++;}); 
+  t.innerHTML=Object.keys(s).map(n=>`<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"><td class="p-4 font-bold text-slate-700 dark:text-slate-200">${n}</td><td class="p-4 text-center text-green-600 font-bold">${s[n].present}</td><td class="p-4 text-center text-yellow-600 font-bold">${s[n].late}</td><td class="p-4 text-center text-red-600 font-bold">${s[n].absent}</td><td class="p-4 text-center font-mono">${s[n].total}</td></tr>`).join(''); 
+}
+function getStatusColor(s){ if(s==='LATE')return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'; if(s==='ABSENT')return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'; return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'; }
+function openEdit(id, s, r){ document.getElementById('edit_id').value=id; document.getElementById('edit_status').value=s; document.getElementById('edit_remarks').value=r; document.getElementById('editModal').classList.remove('hidden'); }
+async function saveEdit(){ const res = await updateAttendanceLog(document.getElementById('edit_id').value, document.getElementById('edit_status').value, document.getElementById('edit_remarks').value); if(res.success) { document.getElementById('editModal').classList.add('hidden'); init(); showToast("Updated"); } else showToast("Error", 'error'); }
+async function removeLog(id){ if(confirm("Delete record?")) { await deleteAttendanceLog(id); init(); showToast("Deleted"); } }
+function downloadExcel() {
+  if(!allLogs.length) return showToast("No data", 'error');
+  const code = document.getElementById('courseFilter').value; let filtered = allLogs; if(code) filtered = filtered.filter(l => l.course_code === code);
+  const dates = [...new Set(filtered.map(l => l.timestamp.split('T')[0]))].sort(); const students = [...new Set(filtered.map(l => l.student_name || l.student_username))].sort();
+  const matrix = []; const header = ["Student Name", ...dates.map(d => formatDate(d))]; matrix.push(header);
+  students.forEach(student => { const row = [student]; dates.forEach(date => { const log = filtered.find(l => (l.student_name === student || l.student_username === student) && l.timestamp.startsWith(date)); row.push(log ? log.status : ""); }); matrix.push(row); });
+  const ws = XLSX.utils.aoa_to_sheet(matrix); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Attendance Matrix"); XLSX.writeFile(wb, `PUP_Attendance_${code||'All'}.xlsx`);
+}
+function downloadPDF() {
+  if(!allLogs.length) return showToast("No data", 'error');
+  const { jsPDF } = window.jspdf; const doc = new jsPDF();
+  doc.setFontSize(14); doc.setTextColor(128, 0, 0); doc.text("PUP Attendance Report", 14, 15);
+  doc.setFontSize(10); doc.setTextColor(100); doc.text("Generated: " + new Date().toLocaleString(), 14, 22);
+  const tableRows = []; const code = document.getElementById('courseFilter').value; const date = document.getElementById('dateFilter').value; let filtered = allLogs;
+  if(code) filtered = filtered.filter(l => l.course_code === code); if(date) filtered = filtered.filter(l => l.timestamp.startsWith(date));
+  filtered.forEach(l => { tableRows.push([l.student_name || l.student_username, l.course_code, formatDate(l.timestamp), l.status, l.remarks || ""]); });
+  doc.autoTable({ head: [["Student", "Course", "Date", "Status", "Remarks"]], body: tableRows, startY: 30, theme: 'grid', styles: { fontSize: 8 }, headStyles: { fillColor: [128, 0, 0] } });
+  doc.save("attendance_report.pdf");
+}
+init();
 </script>
-
 </body>
 </html>

@@ -10,8 +10,9 @@ router.post('/login', async (req, res) => {
   if (!username || !password)
     return res.status(400).json({ error: 'missing_fields' });
 
+  // Updated query: grade -> year
   const user = await get(
-    `SELECT id, username, password_hash, role, full_name
+    `SELECT id, username, password_hash, role, full_name, year, section
      FROM users WHERE username = ?`,
     [username]
   );
@@ -33,7 +34,9 @@ router.post('/login', async (req, res) => {
       id: user.id,
       username: user.username,
       full_name: user.full_name,
-      role: user.role
+      role: user.role,
+      year: user.year, // changed from grade
+      section: user.section
     }
   });
 });

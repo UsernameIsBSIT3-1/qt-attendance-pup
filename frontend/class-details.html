@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Class Details — PUP</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{pup:{maroon:'#800000',gold:'#DAA520'}}}}}</script>
+  <script>if(localStorage.theme==='dark'||(!('theme' in localStorage)&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');else document.documentElement.classList.remove('dark');</script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+  <div class="overlay" onclick="toggleSidebar()"></div>
+  <div class="min-h-screen flex">
+    <aside class="w-64 bg-[#800000] dark:bg-slate-950 text-white flex-col border-r border-slate-700/30">
+      <div class="p-6"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-[#DAA520] rounded-full flex items-center justify-center text-[#800000] shadow-lg"><i class="fa-solid fa-graduation-cap"></i></div><div><div class="font-bold text-lg leading-none">PUP</div><div class="text-xs text-slate-300">Attendance</div></div></div></div>
+      <nav class="flex-1 px-4 mt-6">
+        <a href="index.html" class="nav-active" id="nav-dash"><i class="fa-solid fa-arrow-left w-6"></i> Back to Dash</a>
+        <a href="calendar.html" class="nav-item" id="nav-calendar"><i class="fa-solid fa-calendar-days w-6"></i> Calendar</a>
+        <a href="scan.html" class="nav-item" id="nav-scan"><i class="fa-solid fa-camera w-6"></i> Scan</a>
+        <a href="reports.html" class="nav-item" id="nav-reports"><i class="fa-solid fa-file-csv w-6"></i> Reports</a>
+        <a href="admin.html" class="nav-item hidden" id="nav-admin"><i class="fa-solid fa-user-shield w-6"></i> Admin Panel</a>
+        <a href="help.html" class="nav-item" id="nav-help"><i class="fa-solid fa-circle-question w-6"></i> Help</a>
+        <a href="settings.html" class="nav-item" id="nav-settings"><i class="fa-solid fa-gear w-6"></i> Settings</a>
+      </nav>
+      <div class="p-4 border-t border-white/10"><button onclick="logout()" class="w-full flex items-center gap-2 text-slate-300 hover:text-white px-4 py-2 transition-colors"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</button></div>
+    </aside>
+
+    <main class="flex-1 p-8 h-screen overflow-y-auto">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div class="flex items-center gap-4">
+          <button onclick="toggleSidebar()" class="md:hidden text-slate-600 dark:text-slate-300"><i class="fa-solid fa-bars fa-xl"></i></button>
+          <div>
+            <div class="flex items-center gap-3"><div class="bg-indigo-600 text-white px-3 py-1 rounded text-sm font-bold shadow-sm" id="cCode">CODE</div><h1 class="text-3xl font-bold dark:text-white" id="cName">Course</h1></div>
+            <div class="flex gap-4 mt-2 text-sm text-slate-500 dark:text-slate-400"><span><i class="fa-solid fa-calendar-check mr-1"></i> <span id="totalSessions">0</span> Sessions</span><span><i class="fa-solid fa-users mr-1"></i> <span id="enrollCount">0</span> Students</span></div>
+          </div>
+        </div>
+        <div class="flex gap-2"><button onclick="downloadRosterCSV()" class="btn-primary bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-700 shadow-sm"><i class="fa-solid fa-download"></i> Roster CSV</button></div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="flex flex-col gap-2 bg-slate-100 dark:bg-slate-800 p-4 rounded-lg border dark:border-slate-700">
+          <div class="flex items-center justify-between gap-4 p-2">
+            <div><span class="block text-sm font-bold uppercase text-slate-600 dark:text-slate-300">Online Class Mode</span><span class="text-xs text-slate-500">Allows remote check-in</span></div>
+            <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="toggleOnline" class="sr-only peer" onchange="setMode('is_online')"><div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div></label>
+          </div>
+          <div class="flex items-center justify-between gap-4 p-2 border-t dark:border-slate-700">
+            <div><span class="block text-sm font-bold uppercase text-slate-600 dark:text-slate-300">Secure QR Mode</span><span class="text-xs text-slate-500">Rotating codes (Anti-Cheat)</span></div>
+            <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="toggleSecure" class="sr-only peer" onchange="setMode('secure_qr_mode')"><div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#800000]"></div></label>
+          </div>
+        </div>
+        <div class="card bg-gradient-to-r from-indigo-500 to-purple-600 text-white flex flex-col justify-between">
+          <h3 class="font-bold text-sm uppercase opacity-80 mb-1"><i class="fa-solid fa-robot mr-2"></i> AI Insight</h3>
+          <div class="flex justify-between items-end">
+            <div><div class="text-xl font-bold" id="aiPred">Loading...</div><div class="text-xs opacity-80">Predicted Trend</div></div>
+            <div class="text-3xl font-bold opacity-30" id="aiRate">--%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="card lg:col-span-2 p-0 overflow-hidden">
+          <div class="bg-slate-50 dark:bg-slate-800/50 p-4 border-b dark:border-slate-700 flex justify-between items-center"><div class="font-bold uppercase text-xs text-slate-500 tracking-wider">Student Performance</div><div class="text-xs text-slate-400 italic">* Based on logs</div></div>
+          <div class="table-container"><table class="w-full text-left"><thead class="bg-white dark:bg-slate-900/20 text-xs uppercase text-slate-400 font-semibold border-b dark:border-slate-700"><tr><th class="p-4">Student</th><th class="p-4 text-center">Attended</th><th class="p-4 w-1/3">Attendance Rate</th><th class="p-4 text-right">Status</th></tr></thead><tbody id="rosterTable" class="text-sm dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-700"><tr><td class="p-6 text-center text-slate-400" colspan="4">Loading data...</td></tr></tbody></table></div>
+        </div>
+        <div class="flex flex-col gap-6">
+          <div class="card p-0 overflow-hidden h-fit"><div class="bg-slate-50 dark:bg-slate-800/50 p-4 border-b dark:border-slate-700 font-bold uppercase text-xs text-slate-500 tracking-wider">Recent Logs</div><div class="overflow-y-auto max-h-[500px]"><table class="w-full text-left"><tbody id="logTable" class="text-sm dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-700"><tr><td class="p-6 text-center text-slate-400">Loading history...</td></tr></tbody></table></div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+<script src="js/api.js"></script>
+<script>
+checkAuth();
+const urlParams=new URLSearchParams(window.location.search), courseCode=urlParams.get('code');
+if(!courseCode){alert("No course specified");window.location.href='index.html';}
+document.getElementById('cCode').innerText=courseCode; let enrolledStudents=[]; let currentCourseId = null;
+
+async function init(){
+  const courses=await fetchCourses(); 
+  const course=courses.find(c=>c.code===courseCode); 
+  if(course) {
+    document.getElementById('cName').innerText=course.name;
+    currentCourseId = course.id;
+    if(course.is_online) document.getElementById('toggleOnline').checked = true;
+    if(course.secure_qr_mode) document.getElementById('toggleSecure').checked = true;
+    const ai = await getPrediction(course.id);
+    document.getElementById('aiPred').innerText = ai.prediction;
+    document.getElementById('aiRate').innerText = ai.projected_rate || "--%";
+  }
+
+  const logs=await fetchAttendance(), classLogs=logs.filter(l=>l.course_code===courseCode), uniqueDates=new Set(classLogs.map(l=>l.timestamp.split('T')[0])), totalSessions=uniqueDates.size||1;
+  document.getElementById('totalSessions').innerText=uniqueDates.size;
+  const allEnroll=await getEnrollments(); enrolledStudents=allEnroll.filter(e=>e.code===courseCode); document.getElementById('enrollCount').innerText=enrolledStudents.length;
+  
+  const rB=document.getElementById('rosterTable');
+  if(!enrolledStudents.length)rB.innerHTML='<tr><td colspan="4" class="p-6 text-center text-slate-400">No students enrolled.</td></tr>';
+  else rB.innerHTML=enrolledStudents.map(e=>{ const my=classLogs.filter(l=>l.student_username===e.username||l.student_id===e.student_id), pC=my.filter(l=>l.status==='PRESENT'||l.status==='LATE').length, pct=Math.round((pC/totalSessions)*100); let c="bg-green-500",t="Good",tc="text-green-600 dark:text-green-400"; if(pct<75){c="bg-red-500";t="At Risk";tc="text-red-600 dark:text-red-400 font-bold";}else if(pct<90){c="bg-yellow-400";t="Average";tc="text-yellow-600 dark:text-yellow-400";} return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"><td class="p-4 font-bold text-slate-700 dark:text-slate-200 flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500 text-xs"><i class="fa-solid fa-user"></i></div><div>${e.username}</div></td><td class="p-4 text-center font-mono">${pC} <span class="text-slate-400 text-xs">/ ${totalSessions}</span></td><td class="p-4"><div class="flex items-center gap-3"><span class="text-xs font-bold w-8 text-right">${pct}%</span><div class="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden"><div class="${c} h-full rounded-full" style="width: ${pct}%"></div></div></div></td><td class="p-4 text-right text-xs uppercase font-bold ${tc}">${t}</td></tr>`; }).join('');
+  
+  const lB=document.getElementById('logTable'); if(!classLogs.length)lB.innerHTML='<tr><td class="p-6 text-center text-slate-400">No activity yet.</td></tr>'; else lB.innerHTML=classLogs.slice(0,15).map(l=>`<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"><td class="p-4"><div class="font-bold text-slate-700 dark:text-slate-200">${l.student_name||l.student_username}</div><div class="text-xs text-slate-400 flex items-center gap-1"><i class="fa-regular fa-clock"></i> ${formatDate(l.timestamp)} ${formatTime(l.timestamp)}</div></td><td class="p-4 text-right"><span class="text-[10px] font-bold px-2 py-1 rounded border ${l.status==='LATE'?'bg-yellow-50 text-yellow-700 border-yellow-200':'bg-green-50 text-green-700 border-green-200'}">${l.status}</span></td></tr>`).join('');
+}
+
+async function setMode(type) {
+  const checkbox = document.getElementById(type === 'is_online' ? 'toggleOnline' : 'toggleSecure');
+  const val = checkbox.checked;
+  if(type === 'secure_qr_mode' && val) {
+    const warning = "⚠️ CAUTION: Secure QR Mode\n\nThis requires students to have the app open to generate a rotating QR code.\nLess fortunate students with older devices or no internet/app access will NOT be able to check in via static screenshots.\n\nAre you sure you want to enable this?";
+    if(!confirm(warning)) { checkbox.checked = false; return; }
+  }
+  if(currentCourseId) { await toggleCourseMode(currentCourseId, type, val); showToast("Mode Updated"); }
+}
+
+function downloadRosterCSV(){ if(!enrolledStudents.length)return alert("No students"); let c="Username,Status\n"; enrolledStudents.forEach(e=>c+=`${e.username},Enrolled\n`); const l=document.createElement("a"); l.href=encodeURI("data:text/csv;charset=utf-8,"+c); l.download=`${courseCode}_Roster.csv`; document.body.appendChild(l); l.click(); document.body.removeChild(l); }
+init();
+</script>
+</body>
+</html>
